@@ -1,0 +1,42 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-Iinclude",
+      "-std=gnu11",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Wconversion",
+      "-Wmissing-prototypes",
+      "-Wstrict-prototypes",
+      "-c",
+      "-o",
+      "become_daemon.o",
+      "become_daemon.c"
+    ],
+    "directory": "/home/studentas/learning/daemon",
+    "file": "/home/studentas/learning/daemon/become_daemon.c",
+    "output": "/home/studentas/learning/daemon/become_daemon.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-Iinclude",
+      "-std=gnu11",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Wconversion",
+      "-Wmissing-prototypes",
+      "-Wstrict-prototypes",
+      "-c",
+      "-o",
+      "daemon.o",
+      "daemon.c"
+    ],
+    "directory": "/home/studentas/learning/daemon",
+    "file": "/home/studentas/learning/daemon/daemon.c",
+    "output": "/home/studentas/learning/daemon/daemon.o"
+  }
+]

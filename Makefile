@@ -1,26 +1,34 @@
-BIN:=daemon
+BIN:=tuya_daemon
 PROGRAM_NAME:=tuya_daemon
 SRCS:=$(wildcard *.c)
+HEADERS:=$(wildcard *.h)
+OBJS:=$(SRCS:.c=.o)
 # Garbage produced by make check.
 ASSEMBLY_FILES:=$(wildcard *.s)
-CPPFLAGS:=
+CPPFLAGS:=-Iinclude
 CFLAGS:=-std=gnu11 -Wall -Wextra -Wpedantic -Wconversion -Wmissing-prototypes\
 -Wstrict-prototypes
-EXEC_BIN:=$(BIN)
+EXEC_BIN:=$(EXEC_ENV) ./$(BIN)
+LDLIBS:=-llink_core -lmiddleware_implementation -lplatform_port -lutils_modules
+LDFLAGS:=-Llib -Wl,-rpath,lib
 
-.PHONY: debug clangd clean check format cppcheck
+.PHONY: debug clangd clean check format cppcheck showlog clearlog
 .DELETE_ON_ERROR:
 
 all: $(BIN)
 
-$(BIN):
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(SRCS) -o $(BIN)
+$(BIN): $(OBJS)
+	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+
+# Creates a separate rule for each .o file
+%.o: %.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
 
 debug: $(BIN)
-	$(EXEC_ENV) gdb --args ./$(BIN)
+	gdb --args ./$(BIN)
 
 valgrind: $(BIN)
-	valgrind --leak-check=full --show-leak-kinds=all --trace-children=yes -s env $(EXEC_BIN)
+	valgrind --leak-check=full --show-leak-kinds=all --trace-children=yes -s ./$(BIN)
 
 # compile_commands.json is needed for clangd to work
 # we generate them using bear:
