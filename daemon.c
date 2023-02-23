@@ -1,6 +1,9 @@
 #include <stdlib.h>
 #include <argp.h>
+#include <sys/syslog.h>
 #include <syslog.h>
+
+#include "become_daemon.h"
 
 const char *program_name = "tuya_daemon";
 const char *argp_program_version = "tuya_daemon 0.1";
@@ -90,15 +93,20 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	printf("Device ID: %s\nDevice secret: %s\nProduct ID: %s\n",
-	       arguments.device_id, arguments.device_secret,
-	       arguments.product_id);
+	int daemon = 0; //become_daemon();
 
 	openlog(program_name, LOG_PID | LOG_PERROR, LOG_LOCAL0);
 
-	syslog(LOG_INFO, "Device ID: %s\nDevice secret: %s\nProduct ID: %s\n",
+	syslog(LOG_INFO, "Device ID: %s, device secret: %s, product ID: %s\n",
 	       arguments.device_id, arguments.device_secret,
 	       arguments.product_id);
+
+	if (daemon != 0) {
+		syslog(LOG_ERR,
+		       "Failed to become a daemon: become_daemon() returned %d\n",
+		       daemon);
+		return EXIT_FAILURE;
+	}
 
 	closelog();
 	return EXIT_SUCCESS;

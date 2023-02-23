@@ -1,10 +1,11 @@
 BIN:=daemon
-#SRCS:=$(wildcard *.c)
-SRCS:=daemon.c
+PROGRAM_NAME:=tuya_daemon
+SRCS:=$(wildcard *.c)
 # Garbage produced by make check.
 ASSEMBLY_FILES:=$(wildcard *.s)
 CPPFLAGS:=
-CFLAGS:=-std=gnu11 -Wall -Wextra -Wpedantic -Wconversion
+CFLAGS:=-std=gnu11 -Wall -Wextra -Wpedantic -Wconversion -Wmissing-prototypes\
+-Wstrict-prototypes
 EXEC_BIN:=$(BIN)
 
 .PHONY: debug clangd clean check format cppcheck
@@ -40,3 +41,12 @@ format:
 
 cppcheck:
 	cppcheck --enable=all .
+
+showlog:
+	journalctl --no-hostname -r -t $(PROGRAM_NAME)
+
+# WARNING: this clears all logs in the system,
+# because it is not possible to clear only relevant ones.
+clearlog:
+	sudo journalctl --rotate
+	sudo journalctl --vacuum-time 1s
