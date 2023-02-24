@@ -11,6 +11,10 @@
 # Taken from:
 # https://github.com/torvalds/linux/blob/master/.clang-format
 ---
+# Options valid since clang-format 16
+# LineEnding LF
+# InsertNewlineAtEOF true
+
 AccessModifierOffset: -4
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: false
