@@ -10,7 +10,7 @@
 #include "become_daemon.h"
 #include "connection.h"
 
-void sigint_handler(int signum);
+void signal_handler(int signum);
 
 volatile sig_atomic_t keep_running = 1;
 
@@ -18,8 +18,9 @@ int main(int argc, char *argv[])
 {
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = sigint_handler;
+	sa.sa_handler = signal_handler;
 	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGTERM, &sa, NULL);
 
 	int return_value = EXIT_SUCCESS;
 
@@ -31,7 +32,7 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	int daemon = 0; //become_daemon();
+	int daemon = become_daemon();
 
 	openlog(program_name, LOG_PID | LOG_PERROR, LOG_LOCAL0);
 
@@ -107,7 +108,7 @@ cleanup:
 	return return_value;
 }
 
-void sigint_handler(int signum)
+void signal_handler(int signum)
 {
 	// Avoid unused parameter warning.
 	(void)signum;
