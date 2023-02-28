@@ -11,33 +11,29 @@
 #include "connection.h"
 
 void signal_handler(int signum);
+void set_up_signal_handler(void);
 
 volatile sig_atomic_t keep_running = 1;
 
 int main(int argc, char *argv[])
 {
-	struct sigaction sa;
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = signal_handler;
-	sigaction(SIGINT, &sa, NULL);
-	sigaction(SIGTERM, &sa, NULL);
+	set_up_signal_handler();
 
 	int return_value = EXIT_SUCCESS;
 
 	struct Args arguments = { .device_id = NULL,
 				  .device_secret = NULL,
-				  .product_id = NULL };
+				  .product_id = NULL,
+				  .become_daemon = false };
 	if (argp_parse(&argp, argc, argv, 0, 0, &arguments) != 0) {
 		puts("Argument parsing failure");
 		return EXIT_FAILURE;
 	}
 
-// Don't become a daemon when debugging.
-#ifdef DEBUG
 	int daemon = 0;
-#else
-	int daemon = become_daemon();
-#endif
+	if (arguments.become_daemon) {
+		daemon = become_daemon();
+	}
 
 	openlog(program_name, LOG_PID, LOG_LOCAL0);
 
@@ -80,9 +76,11 @@ int main(int argc, char *argv[])
 	}
 	syslog(LOG_INFO, "Connection to Tuya cloud initialized");
 
-	// Loop a few times to connect.
-	for (int i = 0; i < 5; ++i) {
-		// Loop to receive packets, and handle client keepalive.
+	// Loop a few times to connect. tuya_mqtt_connect does not fully set up
+	// the connection, only initializes it, so a few loop iterations are needed
+	// to finish the setup.
+	for (int i = 0; i < 5 && keep_running == 1; ++i) {
+		// Loop to receive packets and handle client keepalive.
 		if (tuya_mqtt_loop(&mqtt_context) != OPRT_OK) {
 			syslog(LOG_ERR, "Tuya MQTT error");
 			return_value = EXIT_FAILURE;
@@ -91,7 +89,7 @@ int main(int argc, char *argv[])
 	}
 
 	while (keep_running == 1) {
-		// Loop to receive packets, and handle client keepalive.
+		// Loop to receive packets and handle client keepalive.
 		if (tuya_mqtt_loop(&mqtt_context) != OPRT_OK) {
 			syslog(LOG_ERR, "Tuya MQTT error");
 			return_value = EXIT_FAILURE;
@@ -126,4 +124,13 @@ void signal_handler(int signum)
 	// Avoid unused parameter warning.
 	(void)signum;
 	keep_running = 0;
+}
+
+void set_up_signal_handler(void)
+{
+	struct sigaction sa;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = signal_handler;
+	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGTERM, &sa, NULL);
 }

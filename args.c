@@ -22,6 +22,12 @@ const struct argp_option options[] = { { .name = "dev-id",
 					 .flags = 0,
 					 .doc = "Product ID. Required",
 					 .group = 0 },
+				       { .name = "daemon",
+					 .key = 'd',
+					 .arg = NULL,
+					 .flags = OPTION_ARG_OPTIONAL,
+					 .doc = "Become a daemon process.",
+					 .group = 0 },
 				       { 0 } };
 
 const struct argp argp = { .options = options,
@@ -46,7 +52,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	case 'p':
 		arguments->product_id = arg;
 		break;
+	case 'd':
+		arguments->become_daemon = true;
+		break;
 	case ARGP_KEY_ARG:
+		fprintf(stderr, "Unrecognized argument: '%s'\n", arg);
 		// We don't take any positional arguments.
 		argp_usage(state);
 		break;
