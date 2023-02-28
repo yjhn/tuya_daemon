@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 
 	int daemon = become_daemon();
 
-	openlog(program_name, LOG_PID | LOG_PERROR, LOG_LOCAL0);
+	openlog(program_name, LOG_PID, LOG_LOCAL0);
 
 	syslog(LOG_INFO, "Device ID: %s, device secret: %s, product ID: %s\n",
 	       arguments.device_id, arguments.device_secret,
@@ -90,17 +90,24 @@ int main(int argc, char *argv[])
 		if (tuya_mqtt_loop(&mqtt_context) != OPRT_OK) {
 			syslog(LOG_ERR, "Tuya MQTT error");
 			return_value = EXIT_FAILURE;
-			break;
+			goto cleanup;
 		}
 
 		// Send current time every 10 seconds.
 		// Sleep afer calling tuya_mqtt_loop. Since sleep() can be interrupted
 		// by a signal, this allows for a potentilly faster reaction to it.
 		sleep(10);
-		send_current_time(&mqtt_context);
+		if (send_current_time(&mqtt_context) != 0) {
+			syslog(LOG_ERR, "Error sending current time");
+			return_value = EXIT_FAILURE;
+			goto cleanup;
+		}
 	}
 
 cleanup:
+	if (keep_running == 0) {
+		syslog(LOG_INFO, "Got signal to exit");
+	}
 	syslog(LOG_INFO, "Cleaning up resources and exiting");
 	tuya_mqtt_disconnect(&mqtt_context);
 	tuya_mqtt_deinit(&mqtt_context);

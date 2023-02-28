@@ -10,7 +10,7 @@ void on_connected(tuya_mqtt_context_t *context, void *user_data);
 void on_disconnect(tuya_mqtt_context_t *context, void *user_data);
 void on_messages(tuya_mqtt_context_t *context, void *user_data,
 		 const tuyalink_message_t *msg);
-void get_time_string(char *str, size_t str_size);
+int get_time_string(char *str, size_t str_size, const char *format);
 
 int send_current_time(tuya_mqtt_context_t *context);
 
