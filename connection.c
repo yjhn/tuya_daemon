@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <syslog.h>
@@ -7,7 +8,20 @@
 
 #include "connection.h"
 
-char *date_time_format = "%F %T%z";
+// Set to true when setting this value to a malloc'ed string.
+static bool date_time_format_should_free = false;
+static char *date_time_format = "%F %T%z";
+
+// Will allocate a copy of the string.
+static void set_date_time_format(const char *str)
+{
+	if (date_time_format_should_free) {
+		free(date_time_format);
+	}
+	char *format = strdup(str);
+	date_time_format_should_free = true;
+	date_time_format = format;
+}
 
 int send_current_time(tuya_mqtt_context_t *context)
 {
@@ -98,23 +112,30 @@ void on_messages(tuya_mqtt_context_t *context, void *user_data,
 		// Cannot use msg->data_json because the field is always NULL.
 		// This will always successfully parse the data because JSON
 		// is validated by the lib when message is received.
-		struct cJSON *data = cJSON_Parse(msg->data_string);
-		data = data->child;
+		struct cJSON *full_data = cJSON_Parse(msg->data_string);
+		const struct cJSON *data = full_data->child;
 		if (data == NULL) {
 			syslog(LOG_ERR,
 			       "PROPERTY_SET message has unexpected structure");
-			break;
+			goto json_cleanup;
 		}
 		// Field name.
 		if (strcmp(data->string, "date_time_format") != 0) {
 			syslog(LOG_ERR,
 			       "PROPERTY_SET wants to set unknown property with name: %s",
 			       data->string);
-			break;
+			goto json_cleanup;
 		}
-		date_time_format = data->valuestring;
+		if (data->valuestring == NULL) {
+			syslog(LOG_ERR,
+			       "PROPERTY_SET field 'date_time_format' has no value");
+			goto json_cleanup;
+		}
+		set_date_time_format(data->valuestring);
 		syslog(LOG_INFO, "Setting date time format to '%s'",
 		       data->valuestring);
+json_cleanup:
+		cJSON_Delete(full_data);
 		break;
 
 	case THING_TYPE_PROPERTY_REPORT_RSP:
