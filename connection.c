@@ -13,7 +13,7 @@ static bool date_time_format_should_free = false;
 static char *date_time_format = "%F %T%z";
 
 // Will allocate a copy of the string.
-static void set_date_time_format(const char *str)
+void set_date_time_format(const char *str)
 {
 	if (date_time_format_should_free) {
 		free(date_time_format);
@@ -21,6 +21,13 @@ static void set_date_time_format(const char *str)
 	char *format = strdup(str);
 	date_time_format_should_free = true;
 	date_time_format = format;
+}
+
+void free_date_time_format()
+{
+	if (date_time_format_should_free) {
+		free(date_time_format);
+	}
 }
 
 int send_current_time(tuya_mqtt_context_t *context)

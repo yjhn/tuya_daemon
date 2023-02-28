@@ -6,6 +6,10 @@ OBJS:=$(SRCS:.c=.o)
 # Garbage produced by make check.
 ASSEMBLY_FILES:=$(wildcard *.s)
 CPPFLAGS:=-Iinclude
+DEBUG:=0
+ifneq (0, $(DEBUG))
+	CPPFLAGS+= -DDEBUG=1
+endif
 CFLAGS:=-std=gnu11 -Wall -Wextra -Wpedantic -Wconversion -Wmissing-prototypes\
 -Wstrict-prototypes
 # Program arguments should be supplied when running make.

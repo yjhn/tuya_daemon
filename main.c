@@ -32,7 +32,12 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+// Don't become a daemon when debugging.
+#ifdef DEBUG
+	int daemon = 0;
+#else
 	int daemon = become_daemon();
+#endif
 
 	openlog(program_name, LOG_PID, LOG_LOCAL0);
 
@@ -111,6 +116,7 @@ cleanup:
 	syslog(LOG_INFO, "Cleaning up resources and exiting");
 	tuya_mqtt_disconnect(&mqtt_context);
 	tuya_mqtt_deinit(&mqtt_context);
+	free_date_time_format();
 	closelog();
 	return return_value;
 }
