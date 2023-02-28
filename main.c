@@ -12,6 +12,9 @@
 
 void signal_handler(int signum);
 void set_up_signal_handler(void);
+int init_tuya(struct tuya_mqtt_context *context, const char *device_id,
+	      const char *device_secret);
+int connect_to_tuya(struct tuya_mqtt_context *context);
 
 volatile sig_atomic_t keep_running = 1;
 
@@ -19,7 +22,7 @@ int main(int argc, char *argv[])
 {
 	set_up_signal_handler();
 
-	int return_value = EXIT_SUCCESS;
+	int ret_val = EXIT_SUCCESS;
 
 	struct Args arguments = { .device_id = NULL,
 				  .device_secret = NULL,
@@ -49,50 +52,24 @@ int main(int argc, char *argv[])
 	}
 
 	tuya_mqtt_context_t mqtt_context;
-
-	int ret = tuya_mqtt_init(
-		&mqtt_context,
-		&(const tuya_mqtt_config_t){
-			.host = "m1.tuyacn.com",
-			.port = 8883,
-			.cacert = (const unsigned char *)tuya_cacert_pem,
-			.cacert_len = sizeof(tuya_cacert_pem),
-			.device_id = arguments.device_id,
-			.device_secret = arguments.device_secret,
-			.keepalive = 100,
-			.timeout_ms = 2000,
-			.on_connected = on_connected,
-			.on_disconnect = on_disconnect,
-			.on_messages = on_messages });
-	if (ret != OPRT_OK) {
-		syslog(LOG_ERR, "Failed to initialize Tuya MQTT\n");
+	ret_val = init_tuya(&mqtt_context, arguments.device_id,
+			    arguments.device_secret);
+	if (ret_val != EXIT_SUCCESS) {
 		return EXIT_FAILURE;
 	}
 
-	if (tuya_mqtt_connect(&mqtt_context) != OPRT_OK) {
-		syslog(LOG_ERR, "Failed to connect to Tuya\n");
-		return_value = EXIT_FAILURE;
+	ret_val = connect_to_tuya(&mqtt_context);
+	if (ret_val != EXIT_SUCCESS) {
 		goto cleanup;
 	}
-	syslog(LOG_INFO, "Connection to Tuya cloud initialized");
 
-	// Loop a few times to connect. tuya_mqtt_connect does not fully set up
-	// the connection, only initializes it, so a few loop iterations are needed
-	// to finish the setup.
-	for (int i = 0; i < 5 && keep_running == 1; ++i) {
-		// Loop to receive packets and handle client keepalive.
-		if (tuya_mqtt_loop(&mqtt_context) != OPRT_OK) {
-			syslog(LOG_ERR, "Tuya MQTT error");
-			return_value = EXIT_FAILURE;
-			goto cleanup;
-		}
-	}
-
+	unsigned int send_fail_count = 0;
+	// Main loop.
 	while (keep_running == 1) {
 		// Loop to receive packets and handle client keepalive.
 		if (tuya_mqtt_loop(&mqtt_context) != OPRT_OK) {
 			syslog(LOG_ERR, "Tuya MQTT error");
-			return_value = EXIT_FAILURE;
+			ret_val = EXIT_FAILURE;
 			goto cleanup;
 		}
 
@@ -100,10 +77,17 @@ int main(int argc, char *argv[])
 		// Sleep afer calling tuya_mqtt_loop. Since sleep() can be interrupted
 		// by a signal, this allows for a potentilly faster reaction to it.
 		sleep(10);
-		if (send_current_time(&mqtt_context) != 0) {
-			syslog(LOG_ERR, "Error sending current time");
-			return_value = EXIT_FAILURE;
-			goto cleanup;
+		int ret = send_current_time(&mqtt_context);
+		if (ret != 0) {
+			syslog(LOG_ERR,
+			       "Error sending current time, retrying in 10 seconds");
+			send_fail_count += 1;
+			if (send_fail_count == 10) {
+				ret_val = EXIT_FAILURE;
+				goto cleanup;
+			}
+		} else {
+			send_fail_count = 0;
 		}
 	}
 
@@ -116,7 +100,7 @@ cleanup:
 	tuya_mqtt_deinit(&mqtt_context);
 	free_date_time_format();
 	closelog();
-	return return_value;
+	return ret_val;
 }
 
 void signal_handler(int signum)
@@ -133,4 +117,59 @@ void set_up_signal_handler(void)
 	sa.sa_handler = signal_handler;
 	sigaction(SIGINT, &sa, NULL);
 	sigaction(SIGTERM, &sa, NULL);
+}
+
+int init_tuya(struct tuya_mqtt_context *context, const char *device_id,
+	      const char *device_secret)
+{
+	const tuya_mqtt_config_t config = {
+
+		.host = "m1.tuyacn.com",
+		.port = 8883,
+		.cacert = (const unsigned char *)tuya_cacert_pem,
+		.cacert_len = sizeof(tuya_cacert_pem),
+		.device_id = device_id,
+		.device_secret = device_secret,
+		.keepalive = 100,
+		.timeout_ms = 2000,
+		.on_connected = on_connected,
+		.on_disconnect = on_disconnect,
+		.on_messages = on_messages
+	};
+	if (tuya_mqtt_init(context, &config) != OPRT_OK) {
+		syslog(LOG_ERR, "Failed to initialize Tuya MQTT, exiting");
+		return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
+}
+
+int connect_to_tuya(struct tuya_mqtt_context *context)
+{
+	unsigned int sleep_seconds = 2;
+	int ret = tuya_mqtt_connect(context);
+	for (int i = 0; i < 10 && ret != OPRT_OK && keep_running == 1; ++i) {
+		syslog(LOG_ERR,
+		       "Failed to connect to Tuya, retrying in %d seconds",
+		       sleep_seconds);
+		sleep(sleep_seconds);
+		sleep_seconds *= 2;
+		ret = tuya_mqtt_connect(context);
+	}
+	if (ret != OPRT_OK) {
+		syslog(LOG_ERR, "Failed to connect to Tuya cloud, exiting");
+		return EXIT_FAILURE;
+	}
+	syslog(LOG_INFO, "Connection to Tuya cloud initialized");
+
+	// Loop a few times to connect. tuya_mqtt_connect does not fully set up
+	// the connection, only initializes it, so a few loop iterations are needed
+	// to finish the setup.
+	for (int i = 0; i < 5 && keep_running == 1; ++i) {
+		// Loop to receive packets and handle client keepalive.
+		if (tuya_mqtt_loop(context) != OPRT_OK) {
+			syslog(LOG_ERR, "Tuya MQTT error");
+			return EXIT_FAILURE;
+		}
+	}
+	return EXIT_SUCCESS;
 }
