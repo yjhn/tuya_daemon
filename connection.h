@@ -6,7 +6,7 @@
 #include <mqtt_client_interface.h>
 #include <tuyalink_core.h>
 
-void set_date_time_format(const char *str);
+void set_date_time_format(char *format);
 void free_date_time_format(void);
 void on_connected(tuya_mqtt_context_t *context, void *user_data);
 void on_disconnect(tuya_mqtt_context_t *context, void *user_data);

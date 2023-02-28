@@ -12,13 +12,12 @@
 static bool date_time_format_should_free = false;
 static char *date_time_format = "%F %T%z";
 
-// Will allocate a copy of the string.
-void set_date_time_format(const char *str)
+// Will not allocate a copy of the string.
+void set_date_time_format(char *format)
 {
 	if (date_time_format_should_free) {
 		free(date_time_format);
 	}
-	char *format = strdup(str);
 	date_time_format_should_free = true;
 	date_time_format = format;
 }
@@ -120,7 +119,7 @@ void on_messages(tuya_mqtt_context_t *context, void *user_data,
 		// This will always successfully parse the data because JSON
 		// is validated by the lib when message is received.
 		struct cJSON *full_data = cJSON_Parse(msg->data_string);
-		const struct cJSON *data = full_data->child;
+		struct cJSON *data = full_data->child;
 		if (data == NULL) {
 			syslog(LOG_ERR,
 			       "PROPERTY_SET message has unexpected structure");
@@ -141,6 +140,8 @@ void on_messages(tuya_mqtt_context_t *context, void *user_data,
 		set_date_time_format(data->valuestring);
 		syslog(LOG_INFO, "Setting date time format to '%s'",
 		       data->valuestring);
+		// Set it to null to prevent from being freed by cJSON_Delete.
+		data->valuestring = NULL;
 json_cleanup:
 		cJSON_Delete(full_data);
 		break;
