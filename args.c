@@ -38,6 +38,8 @@ const struct argp argp = { .options = options,
 			   .help_filter = NULL,
 			   .argp_domain = NULL };
 
+void print_help_msg(void);
+
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
 	struct Args *arguments = state->input;
@@ -56,22 +58,28 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 		arguments->become_daemon = true;
 		break;
 	case ARGP_KEY_ARG:
-		fprintf(stderr, "Unrecognized argument: '%s'\n", arg);
 		// We don't take any positional arguments.
-		argp_usage(state);
-		break;
+		// Cannot call argp_usage(state) or argp_error(), because they leak memory.
+		fprintf(stderr,
+			"Unrecognized argument: '%s'\nYou can see available options by passing --help\n",
+			arg);
+		return ARGP_ERR_UNKNOWN;
 	case ARGP_KEY_END:
 		if (arguments->device_id == NULL) {
-			argp_error(state,
-				   "Missing required program option --dev-id");
+			fprintf(stderr,
+				"Missing required program option --dev-id\n");
+			print_help_msg();
+			return ARGP_ERR_UNKNOWN;
 		} else if (arguments->device_secret == NULL) {
-			argp_error(
-				state,
+			fprintf(stderr,
 				"Missing required program option --dev-secret");
+			print_help_msg();
+			return ARGP_ERR_UNKNOWN;
 		} else if (arguments->product_id == NULL) {
-			argp_error(
-				state,
+			fprintf(stderr,
 				"Missing required program option --product-id");
+			print_help_msg();
+			return ARGP_ERR_UNKNOWN;
 		}
 	case ARGP_KEY_NO_ARGS:
 		break;
@@ -80,4 +88,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	}
 
 	return 0;
+}
+
+void print_help_msg()
+{
+	fprintf(stderr, "Try `%s --help' or `%s --usage' for more information.",
+		program_name, program_name);
 }
