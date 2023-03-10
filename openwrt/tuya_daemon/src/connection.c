@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/syslog.h>
 #include <time.h>
 #include <syslog.h>
 #include <stdio.h>
@@ -12,33 +13,6 @@
 #include "connection.h"
 #include "send_info.h"
 #include "signals.h"
-/*
-int send_current_time(tuya_mqtt_context_t *context)
-{
-	char buf[200] = "{\"time\":\"";
-	const size_t used_buf_length = strlen(buf);
-	int time_length = 0;
-	if (time_length < 0) {
-		return -1;
-	}
-	if (used_buf_length + (size_t)time_length + 2 >= sizeof(buf)) {
-		syslog(LOG_ERR,
-		       "Time report message does not fit in buffer with length %zu: %s",
-		       sizeof(buf), buf);
-		return -2;
-	}
-	buf[used_buf_length + (size_t)time_length] = '\"';
-	buf[used_buf_length + (size_t)time_length + 1] = '}';
-	buf[used_buf_length + (size_t)time_length + 2] = '\0';
-
-	// All Tuya error codes are < 0,
-	// they are defined in tuya-iot-core-sdk/utils/tuya_error_code.h
-	if (tuyalink_thing_property_report_with_ack(context, NULL, buf) < 0) {
-		syslog(LOG_ERR, "Failed to send current time: %s", buf);
-		return -3;
-	}
-	return 0;
-}*/
 
 void on_connected(tuya_mqtt_context_t *context, void *user_data)
 {
@@ -65,16 +39,16 @@ void on_messages(tuya_mqtt_context_t *context, void *user_data,
 	(void)user_data;
 	(void)context;
 
-	syslog(LOG_INFO, "Got message: id: %s, type: %u, code: %u", msg->msgid,
+	syslog(LOG_DEBUG, "Got message: id: %s, type: %u, code: %u", msg->msgid,
 	       msg->type, msg->code);
 
 	switch (msg->type) {
 	case THING_TYPE_PROPERTY_REPORT_RSP:
-		syslog(LOG_INFO, "Got message type PROPERTY_REPORT_RSP");
+		syslog(LOG_DEBUG, "Got message type PROPERTY_REPORT_RSP");
 		break;
 
 	default:
-		syslog(LOG_ALERT, "unrecognized message type received: %s",
+		syslog(LOG_WARNING, "unrecognized message type received: %s",
 		       msg->data_string);
 		break;
 	}
@@ -133,7 +107,8 @@ int connect_to_tuya(struct tuya_mqtt_context *context)
 	// Loop a few times to connect. tuya_mqtt_connect does not fully set up
 	// the connection, only initializes it, so a few loop iterations are needed
 	// to finish the setup.
-	for (int i = 0; i < 5 && keep_running == 1; ++i) {
+	// When the connection is fully set up, contex->is_connected is set to true
+	while (!context->is_connected && keep_running == 1) {
 		// Loop to receive packets and handle client keepalive.
 		if (tuya_mqtt_loop(context) != OPRT_OK) {
 			syslog(LOG_ERR, "Tuya MQTT error");

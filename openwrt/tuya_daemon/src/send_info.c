@@ -120,14 +120,7 @@ bool send_info(tuya_mqtt_context_t *tuya_ctx, struct ubus_context *ubus_ctx)
 	}
 
 	// mem_data now contains info about device memory
-	// struct memory_data mem_data = resp.data;
-	// syslog(LOG_INFO, "Response json: %s", resp.data_json);
-	// syslog(LOG_INFO,
-	//        "Memory data: total: %llu,"
-	//        " free: %llu, shared: %llu, buffered: %llu,"
-	//        " available: %llu, cached: %llu",
-	//        mem_data.total, mem_data.free, mem_data.shared,
-	//        mem_data.buffered, mem_data.available, mem_data.cached);
+	syslog(LOG_DEBUG, "Memory info from ubus: %s", resp.data_json);
 
 	// All Tuya error codes are < 0,
 	// they are defined in tuya-iot-core-sdk/utils/tuya_error_code.h

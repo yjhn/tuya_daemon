@@ -14,11 +14,23 @@
 #include "send_info.h"
 #include "signals.h"
 
-const char *options_const[] = { "tuya.tuya_daemon.device_id",
-				"tuya.tuya_daemon.device_secret",
-				"tuya.tuya_daemon.product_id",
-				"tuya.tuya_daemon.autostart",
-				"tuya.tuya_daemon.become_daemon" };
+const char *options_const[] = {
+	"tuya.tuya_daemon.device_id",	  "tuya.tuya_daemon.device_secret",
+	"tuya.tuya_daemon.product_id",	  "tuya.tuya_daemon.autostart",
+	"tuya.tuya_daemon.become_daemon", "tuya.tuya_daemon.log_level"
+};
+const size_t options_count = sizeof(options_const) / sizeof(options_const[0]);
+
+const int log_priorities[8] = {
+	LOG_EMERG,
+	LOG_ALERT,
+	LOG_CRIT,
+	LOG_ERR,
+	LOG_WARNING,
+	LOG_NOTICE,
+	LOG_INFO,
+	LOG_DEBUG
+}
 
 int main(void)
 {
@@ -27,11 +39,11 @@ int main(void)
 
 	openlog("tuya_daemon", LOG_PID | LOG_CONS | LOG_PERROR, LOG_LOCAL0);
 
-	char *option_names[] = { strdup(options_const[0]),
-				 strdup(options_const[1]),
-				 strdup(options_const[2]),
-				 strdup(options_const[3]),
-				 strdup(options_const[4]) };
+	char *option_names[] = {
+		strdup(options_const[0]), strdup(options_const[1]),
+		strdup(options_const[2]), strdup(options_const[3]),
+		strdup(options_const[4]), strdup(options_const[5])
+	};
 	// Get program settings from UCI.
 	struct uci_context *uci_ctx = uci_alloc_context();
 	if (uci_ctx == NULL) {
@@ -50,9 +62,12 @@ int main(void)
 					     options_const[3]);
 	char *become_daemon_str = uci_get_option(
 		uci_ctx, &uci_ptr, option_names[4], options_const[4]);
+	char *log_level_str = uci_get_option(uci_ctx, &uci_ptr, option_names[5],
+					     options_const[5]);
 	// All options must be specified.
 	if (device_id == NULL || device_secret == NULL || product_id == NULL ||
-	    autostart_str == NULL || become_daemon_str == NULL) {
+	    autostart_str == NULL || become_daemon_str == NULL ||
+	    log_level_str == NULL) {
 		ret_val = EXIT_FAILURE;
 		goto cleanup_end;
 	}
@@ -71,12 +86,20 @@ int main(void)
 		ret_val = EXIT_FAILURE;
 		goto cleanup_end;
 	}
+	int log_level;
+	if (!str_to_digit(log_level_str, &log_level)) {
+		syslog(LOG_ERR, "Unrecognized value for option 'log_level': %s",
+		       log_level_str);
+		ret_val = EXIT_FAILURE;
+		goto cleanup_end;
+	}
+	setlogmask(LOG_UPTO(log_priorities[log_level]));
 
-	syslog(LOG_INFO,
+	syslog(LOG_DEBUG,
 	       "Options: device ID: %s, device secret: %s,"
-	       " product ID: %s, autostart: %s, become_daemon: %s",
-	       device_id, device_secret, product_id, autostart_str,
-	       become_daemon_str);
+	       " product ID: %s, autostart: %d, become_daemon: %d, log_level: %d",
+	       device_id, device_secret, product_id, autostart, be_daemon,
+	       log_level);
 
 	int daemon = 0;
 	if (be_daemon) {
@@ -138,11 +161,10 @@ cleanup_mqtt:
 	tuya_mqtt_deinit(&mqtt_context);
 cleanup_end:
 	syslog(LOG_INFO, "Cleaning up resources and exiting");
-	free(option_names[0]);
-	free(option_names[1]);
-	free(option_names[2]);
-	free(option_names[3]);
-	free(option_names[4]);
+
+	for (size_t i = 0; i < options_count; ++i) {
+		free(option_names[i]);
+	}
 	uci_free_context(uci_ctx);
 	closelog();
 	return ret_val;

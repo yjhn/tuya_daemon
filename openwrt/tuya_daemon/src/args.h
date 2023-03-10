@@ -14,4 +14,7 @@ char *uci_get_option(struct uci_context *ctx, struct uci_ptr *ptr, char *option,
 // Writes the parsed value to result.
 bool str_to_bool(const char *str, bool *result);
 
+// Converts string containg exactly one ASCII digit to that digit.
+bool str_to_digit(const char *str, int *result);
+
 #endif
