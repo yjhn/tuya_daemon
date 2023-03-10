@@ -87,7 +87,7 @@ int main(void)
 		goto cleanup_end;
 	}
 	int log_level;
-	if (!str_to_digit(log_level_str, &log_level)) {
+	if (!str_to_digit(log_level_str, &log_level) || log_level > 7) {
 		syslog(LOG_ERR, "Unrecognized value for option 'log_level': %s",
 		       log_level_str);
 		ret_val = EXIT_FAILURE;

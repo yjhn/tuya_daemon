@@ -56,7 +56,7 @@ bool str_to_bool(const char *str, bool *result)
 bool str_to_digit(const char *str, int *result)
 {
 	// String must consist of exactly one character
-	if (str[0] == '\0' || str[1] != '\0') {
+	if (strlen(str) != 1) {
 		return false;
 	}
 	// 48 == 0, 57 == 9
