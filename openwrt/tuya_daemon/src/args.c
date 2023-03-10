@@ -7,11 +7,18 @@
 
 #include "args.h"
 
-static bool uci_lookup_succeeded(int ret, const struct uci_ptr *ptr)
+static bool uci_check_success(int ret, const struct uci_ptr *ptr,
+			      const struct uci_context *ctx,
+			      const char *option_name)
 {
 	if (ret == UCI_ERR_NOTFOUND) {
+		char *error;
+		uci_get_errorstr(ctx, &error, "");
+		syslog(LOG_ERR, "Option '%s' not found%s", option_name, error);
+		free(error);
 		return false;
 	} else if ((ptr->flags & UCI_LOOKUP_COMPLETE) == 0) {
+		syslog(LOG_ERR, "Option '%s' not found", option_name);
 		return false;
 	}
 	return true;
@@ -23,11 +30,7 @@ char *uci_get_option(struct uci_context *ctx, struct uci_ptr *ptr, char *option,
 		     const char *const_option)
 {
 	int ret = uci_lookup_ptr(ctx, ptr, option, false);
-	if (!uci_lookup_succeeded(ret, ptr)) {
-		char *error;
-		uci_get_errorstr(ctx, &error, "");
-		syslog(LOG_ERR, "Option '%s' not found%s", const_option, error);
-		free(error);
+	if (!uci_check_success(ret, ptr, ctx, const_option)) {
 		return NULL;
 	}
 	if (ptr->o->type != UCI_TYPE_STRING) {
