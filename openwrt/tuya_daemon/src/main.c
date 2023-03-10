@@ -21,16 +21,8 @@ const char *options_const[] = {
 };
 const size_t options_count = sizeof(options_const) / sizeof(options_const[0]);
 
-const int log_priorities[8] = {
-	LOG_EMERG,
-	LOG_ALERT,
-	LOG_CRIT,
-	LOG_ERR,
-	LOG_WARNING,
-	LOG_NOTICE,
-	LOG_INFO,
-	LOG_DEBUG
-}
+const int log_priorities[8] = { LOG_EMERG,   LOG_ALERT,	 LOG_CRIT, LOG_ERR,
+				LOG_WARNING, LOG_NOTICE, LOG_INFO, LOG_DEBUG };
 
 int main(void)
 {
