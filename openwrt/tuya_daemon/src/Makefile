@@ -2,8 +2,6 @@ BIN:=tuya_daemon
 SRCS:=$(wildcard *.c)
 HEADERS:=$(wildcard *.h)
 OBJS:=$(SRCS:.c=.o)
-# Garbage produced by make check.
-ASSEMBLY_FILES:=$(wildcard *.s)
 CFLAGS:=-std=gnu11 -Wall -Wextra -Wconversion -Wmissing-prototypes \
 -Wstrict-prototypes -Wunused-parameter -Wuninitialized -Wshadow \
 -Wbad-function-cast -Wcast-qual -Wdouble-promotion -Wformat=2 \
@@ -23,15 +21,6 @@ $(BIN): $(OBJS)
 %.o: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
 
-.PHONY: clean
-clean:
-	$(RM) $(OBJS) $(BIN) $(ASSEMBLY_FILES)
-
-# Produces .s files.
-.PHONY: check
-check:
-	gcc $(CPPFLAGS) $(CFLAGS) -fanalyzer -S $(SRCS)
-
 .PHONY: format
 format:
 	clang-format -i --style=file --verbose $(SRCS) $(HEADERS)
@@ -39,7 +28,3 @@ format:
 .PHONY: cppcheck
 cppcheck:
 	cppcheck --enable=all .
-
-.PHONY: clangd
-clangd: clean
-	bear -- $(MAKE)

@@ -7,11 +7,14 @@ PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/tuya/tuya-iot-core-sdk
 PKG_SOURCE_VERSION:=0208badefb2003d30e70b5b875395e3187c850d9
 
+CMAKE_BINARY_SUBDIR:=build
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
-INTERNAL_BUILD_DIR:=$(PKG_BUILD_DIR)/build
-PROVIDED_HEADERS:=$(wildcard $(PKG_BUILD_DIR)/include/*.h) \
-	$(wildcard $(PKG_BUILD_DIR)/interface/*.h) \
-	$(wildcard $(PKG_BUILD_DIR)/utils/*.h) \
+INTERNAL_BUILD_DIR:=$(PKG_BUILD_DIR)/$(CMAKE_BINARY_SUBDIR)
+PROVIDED_HEADERS:=\
+	$(PKG_BUILD_DIR)/include/tuyalink_core.h \
+	$(PKG_BUILD_DIR)/interface/mqtt_client_interface.h \
+	$(PKG_BUILD_DIR)/utils/tuya_error_code.h \
+	$(PKG_BUILD_DIR)/utils/cJSON.h \
 	$(PKG_BUILD_DIR)/examples/data_model_basic_demo/tuya_cacert.h
 PROVIDED_LIBS:=$(INTERNAL_BUILD_DIR)/lib/liblink_core.so \
 	$(INTERNAL_BUILD_DIR)/lib/libmiddleware_implementation.so \
@@ -19,6 +22,7 @@ PROVIDED_LIBS:=$(INTERNAL_BUILD_DIR)/lib/liblink_core.so \
 	$(INTERNAL_BUILD_DIR)/lib/libutils_modules.so
 
 include $(INCLUDE_DIR)/package.mk
+include $(INCLUDE_DIR)/cmake.mk
 
 define Package/libtuya_iot_core
 	CATEGORY:=Network
@@ -36,12 +40,6 @@ define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/lib $(1)/usr/include
 	$(INSTALL_BIN) $(PROVIDED_LIBS) $(1)/usr/lib/
 	$(INSTALL_DATA) $(PROVIDED_HEADERS) $(1)/usr/include/
-endef
-
-define Build/Compile
-	CC="$(TARGET_CC)" CFLAGS="$(TARGET_CFLAGS)" LDFLAGS="$(TARGET_LDFLAGS)" \
-		cmake -S $(PKG_BUILD_DIR) -B $(INTERNAL_BUILD_DIR)
-	$(call Build/Compile/Default,-C $(INTERNAL_BUILD_DIR))
 endef
 
 define Package/libtuya_iot_core/install

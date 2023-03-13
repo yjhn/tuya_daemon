@@ -8,7 +8,6 @@
 
 #include <tuya_cacert.h>
 #include <libubus.h>
-#include <cJSON.h>
 
 #include "connection.h"
 #include "send_info.h"

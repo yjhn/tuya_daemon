@@ -105,9 +105,6 @@ bool send_info(tuya_mqtt_context_t *tuya_ctx, struct ubus_context *ubus_ctx)
 	}
 
 	struct ubus_response resp;
-	// int ubus_invoke(struct ubus_context *ctx, uint32_t obj, const char *method,
-	//	    struct blob_attr *msg, ubus_data_handler_t cb, void *priv,
-	//	    int timeout)
 	ret_val = ubus_invoke(ubus_ctx, id, "info", NULL,
 			      ubus_received_data_process_callback, &resp,
 			      10000);
@@ -119,7 +116,7 @@ bool send_info(tuya_mqtt_context_t *tuya_ctx, struct ubus_context *ubus_ctx)
 		return false;
 	}
 
-	// mem_data now contains info about device memory
+	// resp now contains info about device memory
 	syslog(LOG_DEBUG, "Memory info from ubus: %s", resp.data_json);
 
 	// All Tuya error codes are < 0,

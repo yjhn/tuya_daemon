@@ -1,7 +1,19 @@
-Index: tuya-iot-core-sdk-0.1/middleware/CMakeLists.txt
+Index: libtuya_iot_core-0.1/CMakeLists.txt
 ===================================================================
---- tuya-iot-core-sdk-0.1.orig/middleware/CMakeLists.txt
-+++ tuya-iot-core-sdk-0.1/middleware/CMakeLists.txt
+--- libtuya_iot_core-0.1.orig/CMakeLists.txt
++++ libtuya_iot_core-0.1/CMakeLists.txt
+@@ -72,6 +72,7 @@ add_subdirectory( src )
+ # # Build the demos.
+ add_subdirectory( examples )
+ 
++install(CODE "")
+ 
+ message(STATUS "------------------------------------------------------------" )
+ message(STATUS "[Link SDK] Configuration summary."                            )
+Index: libtuya_iot_core-0.1/middleware/CMakeLists.txt
+===================================================================
+--- libtuya_iot_core-0.1.orig/middleware/CMakeLists.txt
++++ libtuya_iot_core-0.1/middleware/CMakeLists.txt
 @@ -2,7 +2,7 @@ include( ${LIBRARIES_DIR}/coreHTTP/httpF
  include( ${LIBRARIES_DIR}/coreMQTT/mqttFilePaths.cmake )
  
@@ -11,10 +23,10 @@ Index: tuya-iot-core-sdk-0.1/middleware/CMakeLists.txt
                  ${MQTT_SOURCES}
                  ${MQTT_SERIALIZER_SOURCES}
                  ${HTTP_SOURCES}
-Index: tuya-iot-core-sdk-0.1/platform/posix/CMakeLists.txt
+Index: libtuya_iot_core-0.1/platform/posix/CMakeLists.txt
 ===================================================================
---- tuya-iot-core-sdk-0.1.orig/platform/posix/CMakeLists.txt
-+++ tuya-iot-core-sdk-0.1/platform/posix/CMakeLists.txt
+--- libtuya_iot_core-0.1.orig/platform/posix/CMakeLists.txt
++++ libtuya_iot_core-0.1/platform/posix/CMakeLists.txt
 @@ -1,7 +1,7 @@
  include( ${LIBRARIES_DIR}/mbedtlsFilePaths.cmake )
  
@@ -24,10 +36,10 @@ Index: tuya-iot-core-sdk-0.1/platform/posix/CMakeLists.txt
                 "mbedtls_sockets_wrapper.c"
                 "network_wrapper.c"
                 "system_wrapper.c"
-Index: tuya-iot-core-sdk-0.1/src/CMakeLists.txt
+Index: libtuya_iot_core-0.1/src/CMakeLists.txt
 ===================================================================
---- tuya-iot-core-sdk-0.1.orig/src/CMakeLists.txt
-+++ tuya-iot-core-sdk-0.1/src/CMakeLists.txt
+--- libtuya_iot_core-0.1.orig/src/CMakeLists.txt
++++ libtuya_iot_core-0.1/src/CMakeLists.txt
 @@ -3,7 +3,7 @@ include( ${LIBRARIES_DIR}/coreJSON/jsonF
  include( ${LINKSDK_DIRS}/tuyaFilePaths.cmake )
  
@@ -37,10 +49,10 @@ Index: tuya-iot-core-sdk-0.1/src/CMakeLists.txt
      ${LINK_SDK_SOURCES}
      ${JSON_SOURCES}
  )
-Index: tuya-iot-core-sdk-0.1/utils/CMakeLists.txt
+Index: libtuya_iot_core-0.1/utils/CMakeLists.txt
 ===================================================================
---- tuya-iot-core-sdk-0.1.orig/utils/CMakeLists.txt
-+++ tuya-iot-core-sdk-0.1/utils/CMakeLists.txt
+--- libtuya_iot_core-0.1.orig/utils/CMakeLists.txt
++++ libtuya_iot_core-0.1/utils/CMakeLists.txt
 @@ -2,7 +2,7 @@
  FILE(GLOB UTILS_SOURCES *.c)
  
