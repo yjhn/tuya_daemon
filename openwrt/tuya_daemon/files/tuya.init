@@ -4,15 +4,15 @@ START=50
 USE_PROCD=1
 
 start_service() {
-	local autostart
+	local enabled
 
 	config_load 'tuya'
-	config_get autostart tuya_daemon 'autostart' '0'
+	config_get enabled tuya_daemon 'enabled' '0'
 
-	if [ "$autostart" -eq 1 ]; then
+	if [ "$enabled" -eq 1 ]; then
 		procd_open_instance
 		procd_set_param command /usr/bin/tuya_daemon
-		procd_set_param pidfile /var/run/tuya_daemon.pid # TODO: do not call become_daemon whe launched by procd
+		procd_set_param pidfile /var/run/tuya_daemon.pid
 		procd_set_param file /etc/config/tuya
 		procd_close_instance
 	fi
