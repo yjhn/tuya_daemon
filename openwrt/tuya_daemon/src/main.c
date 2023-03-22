@@ -7,17 +7,16 @@
 
 #include <uci.h>
 #include <libubus.h>
+#include <tuya_error_code.h>
 
 #include "args.h"
 #include "connection.h"
-#include "become_daemon.h"
 #include "send_info.h"
 #include "signals.h"
 
 const char *options_const[] = { "tuya.tuya_daemon.device_id",
 				"tuya.tuya_daemon.device_secret",
 				"tuya.tuya_daemon.product_id",
-				"tuya.tuya_daemon.become_daemon",
 				"tuya.tuya_daemon.log_level" };
 const size_t options_count = sizeof(options_const) / sizeof(options_const[0]);
 
@@ -31,13 +30,14 @@ int main(void)
 	int ret_val = EXIT_SUCCESS;
 	set_up_signal_handler();
 
-	openlog("tuya_daemon", LOG_PID | LOG_CONS | LOG_PERROR, LOG_LOCAL0);
+	openlog("tuya_daemon", LOG_PID | LOG_CONS, LOG_LOCAL0);
 
-	char *option_names[] = { strdup(options_const[0]),
-				 strdup(options_const[1]),
-				 strdup(options_const[2]),
-				 strdup(options_const[3]),
-				 strdup(options_const[4]) };
+	char *option_names[] = {
+		strdup(options_const[0]),
+		strdup(options_const[1]),
+		strdup(options_const[2]),
+		strdup(options_const[3]),
+	};
 	// Get program settings from UCI.
 	struct uci_context *uci_ctx = uci_alloc_context();
 	if (uci_ctx == NULL) {
@@ -52,21 +52,11 @@ int main(void)
 					     options_const[1]);
 	char *product_id = uci_get_option(uci_ctx, &uci_ptr, option_names[2],
 					  options_const[2]);
-	char *become_daemon_str = uci_get_option(
-		uci_ctx, &uci_ptr, option_names[3], options_const[3]);
-	char *log_level_str = uci_get_option(uci_ctx, &uci_ptr, option_names[4],
-					     options_const[4]);
+	char *log_level_str = uci_get_option(uci_ctx, &uci_ptr, option_names[3],
+					     options_const[3]);
 	// All options must be specified.
 	if (device_id == NULL || device_secret == NULL || product_id == NULL ||
-	    become_daemon_str == NULL || log_level_str == NULL) {
-		ret_val = EXIT_FAILURE;
-		goto cleanup_end;
-	}
-	bool be_daemon;
-	if (!str_to_bool(become_daemon_str, &be_daemon)) {
-		syslog(LOG_ERR,
-		       "Unrecognized value for option 'become_daemon': %s",
-		       become_daemon_str);
+	    log_level_str == NULL) {
 		ret_val = EXIT_FAILURE;
 		goto cleanup_end;
 	}
@@ -81,20 +71,8 @@ int main(void)
 
 	syslog(LOG_DEBUG,
 	       "Options: device ID: %s, device secret: %s,"
-	       " product ID: %s, become_daemon: %d, log_level: %d",
-	       device_id, device_secret, product_id, be_daemon, log_level);
-
-	int daemon = 0;
-	if (be_daemon) {
-		daemon = become_daemon();
-	}
-	if (ret_val != 0) {
-		syslog(LOG_ERR,
-		       "Failed to become a daemon, become_daemon() returned %d",
-		       daemon);
-		ret_val = EXIT_FAILURE;
-		goto cleanup_end;
-	}
+	       " product ID: %s, log_level: %d",
+	       device_id, device_secret, product_id, log_level);
 
 	tuya_mqtt_context_t mqtt_context;
 	struct ubus_context *ubus_ctx;
@@ -135,7 +113,7 @@ bool main_loop(tuya_mqtt_context_t *mqtt_ctx, struct ubus_context *ubus_ctx)
 	// Main loop.
 	while (keep_running == 1) {
 		// Loop to receive packets and handle client keepalive.
-		if (tuya_mqtt_loop(&mqtt_ctx) != OPRT_OK) {
+		if (tuya_mqtt_loop(mqtt_ctx) != OPRT_OK) {
 			syslog(LOG_ERR, "Tuya MQTT error");
 			return false;
 		}
@@ -144,7 +122,7 @@ bool main_loop(tuya_mqtt_context_t *mqtt_ctx, struct ubus_context *ubus_ctx)
 		// Sleep afer calling tuya_mqtt_loop. Since sleep() can be interrupted
 		// by a signal, this allows for a potentilly faster reaction to it.
 		sleep(10);
-		if (!send_info(&mqtt_ctx, ubus_ctx)) {
+		if (!send_memory_info(mqtt_ctx, ubus_ctx)) {
 			syslog(LOG_NOTICE,
 			       "Error sending information, retrying in 10 seconds");
 			send_fail_count += 1;

@@ -10,6 +10,9 @@
  * Sends device memory info to Tuya.
  * Returns true on success, false on failure.
  */
-bool send_info(tuya_mqtt_context_t *tuya_ctx, struct ubus_context *ubus_ctx);
+bool send_memory_info(tuya_mqtt_context_t *tuya_ctx,
+		      struct ubus_context *ubus_ctx);
 
+int send_connected_devices_list(tuya_mqtt_context_t *tuya_ctx,
+				struct ubus_context *ubus_ctx);
 #endif
