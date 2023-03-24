@@ -8,7 +8,9 @@ CFLAGS:=-std=gnu11 -Wall -Wextra -Wconversion -Wmissing-prototypes \
 -Wformat-overflow=2 -Wformat-signedness -Wformat-truncation=2 \
 -Wnull-dereference -Winit-self -Wmissing-include-dirs -Wswitch-default \
 -Wstrict-overflow=4 \
--fhonour-copts -Os -Werror -Wno-error=unused-variable -Wno-error=unused-parameter
+-fhonour-copts -Os -Werror \
+-Wno-error=unused-variable -Wno-error=unused-parameter -Wno-error=unused-function \
+-Wno-error=unused-const-variable
 LDLIBS:=-llink_core -lmiddleware_implementation -lplatform_port -lutils_modules \
 -luci -lubus -lubox -lblobmsg_json
 
