@@ -5,6 +5,7 @@
 #include <time.h>
 #include <syslog.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include <cJSON.h>
 #include <tuya_cacert.h>
@@ -33,6 +34,53 @@ void on_disconnect(tuya_mqtt_context_t *context, void *user_data)
 	syslog(LOG_INFO, "Disconnected from Tuya cloud");
 }
 
+static void execute_action(const char *const data_string,
+			   struct ubus_context *ubus_ctx,
+			   tuya_mqtt_context_t *tuya_ctx)
+{
+	// This will always successfully parse the data because JSON
+	// is validated by the lib when message is received.
+	struct cJSON *full_data = cJSON_Parse(data_string);
+	struct cJSON *action = cJSON_GetObjectItem(full_data, "actionCode");
+	const char *action_name = cJSON_GetStringValue(action);
+	if (action == NULL || action_name == NULL) {
+		syslog(LOG_ERR, "ACTION_EXECUTE does not contain action name");
+		goto json_cleanup;
+	}
+	if (strcmp(action_name, "list_devices") == 0) {
+		send_connected_devices_list(tuya_ctx, ubus_ctx);
+	} else {
+		struct cJSON *action_args =
+			cJSON_GetObjectItem(full_data, "inputParams");
+		struct cJSON *device =
+			cJSON_GetObjectItem(action_args, "device");
+		const char *const dev_name = cJSON_GetStringValue(device);
+		struct cJSON *pin_json =
+			cJSON_GetObjectItem(action_args, "pin");
+		if (action_args == NULL || device == NULL || dev_name == NULL ||
+		    pin_json == NULL || !cJSON_IsNumber(pin_json)) {
+			syslog(LOG_ERR,
+			       "Action does not have required arguments");
+			goto json_cleanup;
+		}
+
+		uint32_t pin = (uint32_t)pin_json->valuedouble;
+		if (strcmp(action_name, "turn_on_pin") == 0) {
+			control_device_pin(tuya_ctx, ubus_ctx, true, dev_name,
+					   pin);
+		} else if (strcmp(action_name, "turn_off_pin") == 0) {
+			control_device_pin(tuya_ctx, ubus_ctx, false, dev_name,
+					   pin);
+		} else {
+			syslog(LOG_WARNING, "Unrecognized action requested: %s",
+			       action_name);
+			goto json_cleanup;
+		}
+	}
+json_cleanup:
+	cJSON_Delete(full_data);
+}
+
 void on_messages(tuya_mqtt_context_t *context, void *user_data,
 		 const tuyalink_message_t *msg)
 {
@@ -42,31 +90,9 @@ void on_messages(tuya_mqtt_context_t *context, void *user_data,
 	       msg->data_string);
 
 	switch (msg->type) {
-	case THING_TYPE_ACTION_EXECUTE:; // Empty statement, otherwise an error is thrown.
+	case THING_TYPE_ACTION_EXECUTE:
 		// Cannot use msg->data_json because the field is always NULL.
-		// This will always successfully parse the data because JSON
-		// is validated by the lib when message is received.
-		struct cJSON *full_data = cJSON_Parse(msg->data_string);
-		struct cJSON *action =
-			cJSON_GetObjectItem(full_data, "actionCode");
-		if (action == NULL) {
-			syslog(LOG_ERR,
-			       "ACTION_EXECUTE does not contain action code");
-			goto json_cleanup;
-		}
-		const char *action_name = cJSON_GetStringValue(action);
-		if (action_name == NULL ||
-		    strcmp(action_name, "list_devices") != 0) {
-			syslog(LOG_ERR, "Unrecognized action requested: %s",
-			       action_name);
-			goto json_cleanup;
-		}
-		send_connected_devices_list(context, ubus_ctx);
-		// TODO: call devctl via ubus.
-		// Set it to null to prevent from being freed by cJSON_Delete.
-		// data->valuestring = NULL;
-json_cleanup:
-		cJSON_Delete(full_data);
+		execute_action(msg->data_string, ubus_ctx, context);
 		break;
 	default:
 		syslog(LOG_WARNING, "unrecognized message type received: %s",
