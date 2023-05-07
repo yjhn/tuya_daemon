@@ -1,4 +1,6 @@
-# Tuya daemon - daemon that talks to Tuya cloud
+# Tuya daemon
+
+Daemon that talks to Tuya cloud.
 
 ### License
 
